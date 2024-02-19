@@ -11,37 +11,44 @@ const container = document.querySelector("div");
 const searchInput = document.querySelector("input");
 const btnLoad = document.querySelector(".btn-load");
 
-const showLoader = () => {
-    const loader = document.createElement('span');
-    loader.classList.add("loader");
-    container.append(loader);
-}
-
-const hideLoader = () => {
-    const loader = document.querySelector('.loader');
-    if (loader) {
-        loader.remove();
+function toggleLoader(showLoader) {
+    if (showLoader) {
+        const loader = document.createElement('span');
+        loader.classList.add("loader");
+        container.append(loader);
+    } else {
+        const loader = document.querySelector('.loader');
+        if (loader) {
+            loader.remove();
+        }
     }
 }
 
 
-const showButton = () => {
-    btnLoad.style.display = "block";
+
+const toggleButton = (shouldShow) => {
+    btnLoad.style.display = shouldShow ? "block" : "none";
+    
 }
 
-const hideButton = () => {
-    btnLoad.style.display = "none";
-}
-
+ const lightbox = new SimpleLightbox('.gallery a', {
+        captions: true,
+        captionType: 'attr',
+        captionData: 'alt',
+        captionPosition: 'bottom',
+        fadeSpeed: 150,
+        captionSelector: 'img',
+        captionDelay: 250
+    });
 
 let page = 1;
-let per_page = 40;
+let per_page = 15;
 let query = "";
 let totalHits;
 
 form.addEventListener("submit", async (evt) => {
     page = 1;
-    showLoader();
+    toggleLoader(true);
     gallery.innerHTML = "";
     evt.preventDefault();
     try {
@@ -49,13 +56,13 @@ form.addEventListener("submit", async (evt) => {
         const photos = await searchImages();
         renderImages(photos);
         form.reset();
-        hideLoader();
-        showButton();
-        if (photos.hits.length < 40) {
-            hideButton();
+        toggleLoader(false);
+        toggleButton(true);
+        if (photos.hits.length < 15) {
+            toggleButton(false);
         }
         if (photos.hits.length === 0) {
-            hideButton();
+            toggleButton(false);
             iziToast.error({
                 message: "Sorry, there are no images matching <br>your search query. Please try again!</br>",
                 position: 'center',
@@ -72,12 +79,12 @@ form.addEventListener("submit", async (evt) => {
 
 
 btnLoad.addEventListener("click", async () => {
-    showLoader();
+   toggleLoader(true);
     try {
         page += 1;
         const photos = await searchImages();
         renderImages(photos);
-        hideLoader();
+        toggleLoader(false);
 
         const { height: cardHeight } = document.querySelector('.gallery')
             .firstElementChild.getBoundingClientRect();
@@ -91,13 +98,13 @@ btnLoad.addEventListener("click", async () => {
                 position: 'bottomCenter',
                 transitionIn: 'fadeInDown',
             });
-            hideButton();
+            toggleButton(false);
         }
     } catch (err) {
         iziToast.err({
             title: 'Error'
         })
-        hideLoader();
+        toggleLoader(false);
     }
 }) 
 
@@ -117,14 +124,15 @@ async function searchImages() {
 
         return response.data;
     } catch (err) {
-        console.log(err);
-        throw WebTransportError;
+        iziToast.error({
+            title: 'Sorry, I can`t find your images'
+        })
     }
 };
 
 function renderImages(data) {
     const markup = data.hits.map(data => {
-        return `             <li class="gallery-item"><a href="${data.largeImageURL}">
+        return `       <li class="gallery-item"><a href="${data.largeImageURL}">
         <img class="gallery-image" src="${data.webformatURL}" alt="${data.tags}"></a>
            <p><b>Likes: </b>${data.likes}</p>
           <p><b>Views: </b>${data.views}</p>
@@ -134,17 +142,9 @@ function renderImages(data) {
     }).join("");
 
     gallery.insertAdjacentHTML("beforeend", markup);
-    const lightbox = new SimpleLightbox('.gallery a', {
-        captions: true,
-        captionType: 'attr',
-        captionData: 'alt',
-        captionPosition: 'bottom',
-        fadeSpeed: 150,
-        captionSelector: 'img',
-        captionDelay: 250
-    });
+   
     lightbox.on('show.simplelightbox').refresh();
-    hideLoader();
+    toggleLoader(false);
 };
 
 
